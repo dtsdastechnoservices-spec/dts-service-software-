@@ -3,6 +3,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const os = require("os");
+const path = require("path");
 
 const app = express();
 
@@ -14,6 +15,18 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// ==================== FAVICON ====================
+// Prevent 404 errors for favicon - just return empty response
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).send(); // 204 No Content - success but no content
+});
+
+// ==================== SERVE REACT FRONTEND ====================
+// Serve React static files from frontend build
+const reactBuildPath = path.join(__dirname, "../../dts-frontend/build");
+app.use(express.static(reactBuildPath, { maxAge: "1h" }));
+
 const googleSheetRoutes = require("./routes/googleSheetRoutes");
 
 
@@ -59,7 +72,22 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/pdf", pdfRoutes); // ✅ Add PDF route
 app.use("/api/sheets", googleSheetRoutes);
 
+// ==================== REACT ROUTER FALLBACK ====================
+// Serve index.html for all non-API GET requests (React Router SPA)
+app.use((req, res, next) => {
+  try {
+    if (req.method !== 'GET') return next();
+    if (req.path && req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(reactBuildPath, 'index.html'), (err) => {
+      if (err) return next(err);
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ DTS Backend running on http://0.0.0.0:${PORT}`);
   console.log(`📱 Access from mobile: http://192.168.0.100:${PORT}`);
+  console.log(`🌐 React frontend served from: ${reactBuildPath}`);
 });
