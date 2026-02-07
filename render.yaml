@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: dts-backend-svct
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: >
+      npm install &&
+      cd ../dts-frontend &&
+      npm install &&
+      npm run build &&
+      cd ../dts-service-software
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
